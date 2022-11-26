@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path')
+const path = require('path');
+const crypto = require('crypto');
 const dbPath = path.resolve(__dirname, 'data/hymns.db')
 const db = new sqlite3.Database(dbPath, err => {
    if (err) console.log(err)
@@ -12,13 +13,19 @@ function formatRow(row) {
    Object.keys(row).map( x => {
       if (x.match(/verse/)){
          verses.push( {
-            verseName: 'Verse ' + x.charAt(5),
-            text: row[x]
+            Type: 'Verse ' + x.charAt(5),
+            PartType: 0,
+            PartTypeNumber: parseInt(x.charAt(5)),
+            Lyrics: row[x],
+            Guid: crypto.randomUUID(),
          })
          if (row.refrain){
             verses.push({
-               verseName: 'Refrain',
-               text: row.refrain
+               Type: 'Refrain 1',
+               PartType: 8,
+               PartTypeNumber: 1,
+               Lyrics: row.refrain,
+               Guid: crypto.randomUUID(),
             })
          }
       }
@@ -27,23 +34,50 @@ function formatRow(row) {
    if (row.refrain2){
       verses.pop()
       verses.push({
-         verseName: 'Refrain',
-         text: row.refrain2
+         Type: 'Refrain 2',
+         PartType: 8,
+         PartTypeNumber: 2,
+         Lyrics: row.refrain2,
+         Guid: crypto.randomUUID(),
       })
    }
    //Hymn 121, (Go Tell It On The Mountain)
    if (row.number === 121) {
       verses.unshift({
-         verseName: 'Refrain',
-         text: row.refrain
+         Type: 'Refrain 1',
+         PartType: 8,
+         PartTypeNumber: 1,
+         Lyrics: row.refrain,
+         Guid: crypto.randomUUID(),
       })
    }
-   return {
-      hymnNumber: number,
-      hymnTitle: title,
-      verses: verses
-   };
 
+   return                {
+      CCLID: null,
+      PageNumber: null,
+      Tags: [],
+      Copyright: [],
+      Disclaimer: null,
+      LyricsParts: verses.map(({Lyrics, PartType, PartTypeNumber, Guid}) => {
+         return {
+            Lyrics,
+            PartType,
+            PartTypeNumber,
+            Guid,
+         };
+      }),
+      SongID: crypto.randomUUID(),
+      PlayOrder: verses.map(verse => verse.Type),
+      PlayOrderWithGuids: verses.map(verse => {
+         return {
+            Item1: verse.Type,
+            Item2: verse.Guid,
+         }
+      }),
+      Title: number.toString(),
+      SongNumber: null,
+      Authors: []
+   };
 }
 
 function formatToText(object) {
